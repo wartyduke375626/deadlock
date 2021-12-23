@@ -5,12 +5,12 @@
 class CardReader {
     
 private:
-    PN532 *nfc;
+    PN532* nfc;
+    uint16_t timeout;
     
 public:
-    CardReader();
-    CardReader(PN532* nfc);
+    CardReader(PN532* nfc, uint16_t timeout);
     ~CardReader();
     bool begin();
-    bool readCard(uint64_t *snr);
+    bool readCard(uint64_t* snr);
 };
