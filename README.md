@@ -30,7 +30,7 @@ This project uses an ESP8266 NodeMCU board and a PN532 NFC module. The board rea
 |:------------:|:-------------:|
 | GND          | G             |
 | VCC          | 3V            |
-| SCK          | D6            |
+| SCK          | D5            |
 | MISO         | D6            |
 | MOSI         | D7            |
 | SS           | D0            |
