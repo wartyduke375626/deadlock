@@ -11,6 +11,7 @@
 
 PN532_SPI pn532spi(SPI, SS_PIN);
 PN532 nfc(pn532spi);
+WiFiManager wifiManager;
 CardReader cardReader(&nfc, CARD_READER_TIMEOUT);
 RequestSender requestSender;
 
@@ -21,10 +22,10 @@ char* token;
 void setup(void) {
     Serial.begin(115200);
     bool success;
-
-    WiFiManager wifiManager;
+    
     //Uncomment this line to reset saved WiFi credentials for testing purposes
     //wifiManager.resetSettings();
+    
     wifiManager.autoConnect(AUTOCONNECT_AP_SSID, AUTOCONNECT_AP_PASSWORD);
     Serial.println();
 
@@ -41,6 +42,9 @@ void setup(void) {
         
     } else {
         Serial.println("WiFi Disconnected");
+        while(WiFi.status() != WL_CONNECTED) delay(MAIN_LOOP_DELAY);
+        Serial.println("WiFi Reconnected");
+        Serial.println();
     }
 
     success = cardReader.begin();
@@ -76,6 +80,9 @@ void loop(void) {
             
         } else {
             Serial.println("WiFi Disconnected");
+            while(WiFi.status() != WL_CONNECTED) delay(MAIN_LOOP_DELAY);
+            Serial.println("WiFi Reconnected");
+            Serial.println();
         }
     }
 
