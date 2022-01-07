@@ -14,6 +14,7 @@ This project uses an ESP8266 NodeMCU board and a PN532 NFC module. The board rea
 ## Required software:
 - Arduino IDE: https://www.arduino.cc/en/software
 - PN532 library: https://github.com/elechouse/PN532
+- WiFiManager library: https://github.com/tzapu/WiFiManager (also downloadable within Arduino IDE)
 - Arduino_JSON library: https://github.com/arduino-libraries/Arduino_JSON (also downloadable within Arduino IDE)
 - ESP8266 board installed in Arduino IDE
 
@@ -35,7 +36,13 @@ This project uses an ESP8266 NodeMCU board and a PN532 NFC module. The board rea
 | MOSI         | D7            |
 | SS           | D0            |
 
-3. Install and setup the ESP8266 board in Arduino IDE - more info can be found in the board user manual: https://handsontec.com/dataspecs/module/esp8266-V13.pdf
+3. Install and setup the ESP8266 board in Arduino IDE - more information can be found in the board user manual: https://handsontec.com/dataspecs/module/esp8266-V13.pdf.
 4. Download and include all the required libraries in the Arduino IDE sketch.
-5. In 'src/main.ino' redefine 'WIFI_SSID' and 'WIFI_PASSWORD' constants to match with your WiFi.
-6. Flash.
+5. Flash.
+6. After first start, setup WiFi credentials through the board's access point:
+   1. Connect to the board's access point with your device. Defaults are: SSID - 'ESP2866_AP', password - 'D3@d1ock'. These values can be changed in 'constants.h'.
+   2. In your browser go to '192.168.4.1'.
+   3. Select 'Configure WiFi'.
+   4. Insert your WiFi credentials and select 'Save'.
+   5. Once successful connection is established, the access point will shut be down and the program will start.
+   - the board will save the WiFi credentials in the EEPROM and will automatically try to connect on next startup. Upon failure it will go back to WiFi setup mode and this whole process needs to be repeated. More information can be found in the WiFiManager library documentation: https://github.com/tzapu/WiFiManager.

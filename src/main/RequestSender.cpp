@@ -3,6 +3,7 @@
 #include <WiFiClientSecure.h>
 #include <Arduino_JSON.h>
 #include <SoftwareSerial.h>
+#include "constants.h"
 
 
 
@@ -27,7 +28,6 @@ bool RequestSender::requestToken(const char* server, const char* requestData, ch
 
     if (responseCode != 200) {
         Serial.println("Failed to acquire token");
-        Serial.print("HTTP Response code: "); Serial.println(responseCode);
         return false;
     }
 
