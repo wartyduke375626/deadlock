@@ -120,6 +120,10 @@ bool RequestSender::sendLog(const char* endpoint, const char* token, const char*
         Serial.println("Response data JSON does not contain \"success\" key");
         return false;
     }
+    if (JSON.typeof(jsonData["success"]) != "boolean") {
+        Serial.println("Response data JSON \"success\" is not of type boolean");
+        return false;
+    }
     if (!(bool) jsonData["success"]) {
         Serial.println("Response data JSON \"success\" key value is not equal to \"true\"");
         return false;
@@ -184,6 +188,10 @@ bool RequestSender::requestAccess(const char* endpointBase, const char* token, u
     }
     if (!jsonData.hasOwnProperty("allow")) {
         Serial.println("Response data JSON does not contain \"allow\" key");
+        return false;
+    }
+    if (JSON.typeof(jsonData["allow"]) != "boolean") {
+        Serial.println("Response data JSON \"allow\" is not of type boolean");
         return false;
     }
 
