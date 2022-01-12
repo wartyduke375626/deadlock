@@ -16,7 +16,18 @@ CardReader cardReader(&nfc, CARD_READER_TIMEOUT);
 RequestSender requestSender;
 
 unsigned long lastTokenTime = 0;
-char* token;
+char* token = "";
+unsigned long lastTestLogTime = 0;
+
+
+void checkWiFiConnected() {
+    if(WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi Disconnected");
+        while(WiFi.status() != WL_CONNECTED) delay(MAIN_LOOP_DELAY);
+        Serial.println("WiFi Reconnected");
+        Serial.println();
+    }
+}
 
 
 void setup(void) {
@@ -28,24 +39,11 @@ void setup(void) {
     
     wifiManager.autoConnect(AUTOCONNECT_AP_SSID, AUTOCONNECT_AP_PASSWORD);
     Serial.println();
-
-    if(WiFi.status() == WL_CONNECTED) {
-        success = requestSender.requestToken(TOKEN_ENDPOINT, TOKEN_REQUEST_DATA, &token);
-
-        if (success) {
-            lastTokenTime = millis();
-            Serial.print("Token acquired: "); Serial.println(token);
-            Serial.println();
-        } else {
-            Serial.print("Failed to acquire token");
-        }
-        
-    } else {
-        Serial.println("WiFi Disconnected");
-        while(WiFi.status() != WL_CONNECTED) delay(MAIN_LOOP_DELAY);
-        Serial.println("WiFi Reconnected");
-        Serial.println();
-    }
+    checkWiFiConnected();
+    
+    success = requestSender.requestToken(TOKEN_ENDPOINT, TOKEN_REQUEST_DATA, &token);
+    if (success) lastTokenTime = millis();
+    else { Serial.println("Failed to acquire token");  token = ""; } 
 
     success = cardReader.begin();
     if (!success) while(true);
@@ -54,38 +52,39 @@ void setup(void) {
 
 void loop(void) {
     bool success;
-    uint64_t snr;
-    
-    success = cardReader.readCard(&snr);
-    
-    if (success) {
-        Serial.print("  SNR: "); Serial.println(snr);
-        Serial.println();
-    }
+    uint64_t card;
 
-    
     if ((millis() - lastTokenTime) > TOKEN_TIMEOUT) {
+        checkWiFiConnected();
+        delete[] token;
         
-        if(WiFi.status() == WL_CONNECTED) {
-            delete [] token;
-            success = requestSender.requestToken(TOKEN_ENDPOINT, TOKEN_REQUEST_DATA, &token);
-
-            if (success) {
-                lastTokenTime = millis();
-                Serial.print("Token acquired: "); Serial.println(token);
-                Serial.println();
-            } else {
-                Serial.print("Failed to acquire token");
-            }
-            
-        } else {
-            Serial.println("WiFi Disconnected");
-            while(WiFi.status() != WL_CONNECTED) delay(MAIN_LOOP_DELAY);
-            Serial.println("WiFi Reconnected");
-            Serial.println();
-        }
+        success = requestSender.requestToken(TOKEN_ENDPOINT, TOKEN_REQUEST_DATA, &token);
+        if (success) lastTokenTime = millis();
+        else Serial.print("Failed to acquire token");
     }
 
+    if ((millis() - lastTestLogTime) > TEST_LOG_TIMEOUT) {
+        checkWiFiConnected();
+        
+        success = requestSender.sendLog(LOG_ENDPOINT, token, "0.0.0.1", "Test message", "Test message data", 1, "INFO");
+        if (success) lastTestLogTime = millis();
+        else { Serial.println("Failed to acquire token");  token = ""; }
+    }
+
+    
+    success = cardReader.readCard(&card);
+    if (success) {
+        checkWiFiConnected();
+
+        bool allowed;
+        success = requestSender.requestAccess(ACCESS_ENDPOINT_BASE, token, card, 1, &allowed);
+        if (success) {
+            if (allowed) Serial.println("Access allowed");
+            else Serial.println("Access denied");
+        }
+        else Serial.println("Failed to request access");
+    }
+    
     
     delay(MAIN_LOOP_DELAY);
 }

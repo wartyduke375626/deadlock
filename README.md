@@ -42,12 +42,12 @@ This project uses an ESP8266 NodeMCU board and a PN532 NFC module. The board rea
 6. After first startup, you will need to save your WiFi SSID and password to the board's EEPROM through the board's access point.
 
 ## How to set WiFi after first startup
-During setup the board will attempt to connect to WiFi using the SSID and password saved in the boards EEPROM. If they are not present there or the connection process fails, the board will switch to WiFi setup mode, turn on it's access point and wait.
+During setup the board will attempt to connect to WiFi using the SSID and password saved in the board's EEPROM. If they are not present there or the connection process fails, the board will switch to WiFi setup mode, turn on it's access point and wait.
 
 1. Connect to the board's access point with your device. Defaults are: SSID - 'ESP2866_AP', password - 'D3@d1ock'. These values can be changed in 'constants.h'.
 2. In your browser go to '192.168.4.1'.
 3. Select 'Configure WiFi' and insert your WiFi SSID and password, then select 'Save'.
-4. Once a successful connection is established, the access point will be shut down and the card reading program will start. Upon failure it will stay in WiFi setup mode and you will need to repeat this process.
+4. Once a successful connection is established, the access point will be shut down and the card reader program will start. Upon failure it will stay in WiFi setup mode and you will need to repeat this process.
 
 Once successful, the board will save the WiFi credentials in it's EEPROM and will automatically try to connect on next startup. Upon failure it will go back to WiFi setup mode and you need to repeat steps 1-4. More information can be found in the WiFiManager library documentation: https://github.com/tzapu/WiFiManager.
 

@@ -9,7 +9,9 @@ CardReader::CardReader(PN532* nfc, uint16_t timeout) {
     this->timeout = timeout;
 }
 
+
 CardReader::~CardReader() {}
+
 
 
 bool CardReader::begin() {
@@ -31,18 +33,22 @@ bool CardReader::begin() {
     return true;
 }
 
-uint64_t convert(const uint8_t* uid, uint8_t uidLength) {
-    uint64_t snr = 0;
+
+
+uint64_t convertToDecimal(const uint8_t* uid, uint8_t uidLength) {
+    uint64_t card = 0;
     
     for (size_t i=0; i<uidLength; ++i) {
         uint64_t tmp = uid[i];
-        snr += tmp << (8*i);
+        card += tmp << (8*i);
     }
 
-    return snr;
+    return card;
 }
 
-bool CardReader::readCard(uint64_t* snr) {
+
+
+bool CardReader::readCard(uint64_t* card) {
     uint8_t success;
     uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };
     uint8_t uidLength;
@@ -52,8 +58,10 @@ bool CardReader::readCard(uint64_t* snr) {
         Serial.println("Found an ISO14443A card");
         Serial.print("  UID Length: "); Serial.print(uidLength, DEC); Serial.println(" bytes");
         Serial.print("  UID Value: "); nfc->PrintHex(uid, uidLength);
+        Serial.print("  Decimal: "); Serial.println(*card);
+        Serial.println();
 
-        *snr = convert(uid, uidLength);
+        *card = convertToDecimal(uid, uidLength);
         return true;
     }
 
