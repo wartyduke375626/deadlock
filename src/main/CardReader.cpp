@@ -13,6 +13,17 @@ CardReader::CardReader(PN532* nfc, uint16_t timeout) {
 CardReader::~CardReader() {}
 
 
+uint64_t CardReader::convertToDecimal(const uint8_t* uid, uint8_t uidLength) {
+    uint64_t card = 0;
+    
+    for (size_t i=0; i<uidLength; ++i) {
+        uint64_t tmp = uid[i];
+        card += tmp << (8*i);
+    }
+
+    return card;
+}
+
 
 bool CardReader::begin() {
     nfc->begin();
@@ -32,20 +43,6 @@ bool CardReader::begin() {
     
     return true;
 }
-
-
-
-uint64_t convertToDecimal(const uint8_t* uid, uint8_t uidLength) {
-    uint64_t card = 0;
-    
-    for (size_t i=0; i<uidLength; ++i) {
-        uint64_t tmp = uid[i];
-        card += tmp << (8*i);
-    }
-
-    return card;
-}
-
 
 
 bool CardReader::readCard(uint64_t* card) {
