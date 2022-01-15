@@ -3,12 +3,15 @@
 
 
 
-char* DataFormatter::getLogData(const char* ipAddr, const char* msg, const char* data, unsigned int levelNo, const char* level) {
+char* DataFormatter::getLogData(const IPAddress &ip, const char* msg, const char* data, unsigned int levelNo, const char* level) {
+    char ipStr[16];
+    sprintf(ipStr, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+    
     char levelNoStr[3*sizeof(unsigned int)];
     sprintf(levelNoStr, "%d", levelNo);
 
     JSONVar json;
-    json["ip_addr"] = ipAddr;
+    json["ip_addr"] = ipStr;
     json["msg"] = msg;
     json["data"] = data;
     json["levelno"] = levelNoStr;

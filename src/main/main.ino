@@ -10,86 +10,134 @@
 #include "RequestSender.h"
 
 
+#define IP_ADDRESS IPAddress(0, 0, 0, 1)
+
+// Use this instead if you want to send your current local IP in log requests.
+//#define IP_ADDRESS WiFi.localIP();
+
+
 
 PN532_SPI pn532spi(SPI, SS_PIN);
 PN532 nfc(pn532spi);
+
 WiFiManager wifiManager;
 CardReader cardReader(&nfc, CARD_READER_TIMEOUT);
 
 unsigned long lastTokenTime = 0;
-char* token = "";
-unsigned long lastTestLogTime = 0;
+char* token;
 
 
-void checkWiFiConnected() {
-    while(WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi Disconnected, waiting for reconnect...");
+
+// Checks if WiFi is connected, if not will loop untill WiFi reconnects. Returns 'true' if TOKEN_TIMEOUT has expired during this process.
+bool checkWiFiConnectedAndTokenExpired() {
+    if (WiFi.status() != WL_CONNECTED) {
+        while (WiFi.status() != WL_CONNECTED) {
+            Serial.println("Fatal error: WiFi disconnected, waiting for reconnect...\n");
+            delay(MAIN_LOOP_DELAY);
+        }
+
+        Serial.println("WiFi reconnected.\n");
+    }
+
+    return (millis() - lastTokenTime) > TOKEN_TIMEOUT;
+}
+
+
+void resetToken(bool deleteOld) {
+    while (true) {
+        
+        if (deleteOld) delete[] token;
+        bool success = RequestSender::requestToken(TOKEN_ENDPOINT, TOKEN_REQUEST_DATA, &token);
+        
+        if (success) {
+            lastTokenTime = millis();
+            return;
+        }
+
+        Serial.println("Fatal error: failed to acquire access token, retrying...\n");
         delay(MAIN_LOOP_DELAY);
     }
-    Serial.println("WiFi Reconnected");
-    Serial.println();
 }
+
 
 
 void setup(void) {
     Serial.begin(115200);
-    bool success;
     
-    //Uncomment this line to reset saved WiFi credentials for testing purposes
+    // Uncomment this line to reset saved WiFi credentials for testing purposes.
     //wifiManager.resetSettings();
     
     wifiManager.autoConnect(AUTOCONNECT_AP_SSID, AUTOCONNECT_AP_PASSWORD);
     Serial.println();
-    checkWiFiConnected();
-    
-    success = RequestSender::requestToken(TOKEN_ENDPOINT, TOKEN_REQUEST_DATA, &token);
-    if (success) lastTokenTime = millis();
-    else { Serial.println("Failed to acquire token");  token = ""; } 
 
-    success = cardReader.begin();
-    if (!success) while(true);
+    checkWiFiConnectedAndTokenExpired();
+    resetToken(false);
+
+    bool success = cardReader.begin();
+    if (!success) {
+        if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
+        
+        char* logData = DataFormatter::getLogData(IP_ADDRESS, "NFC module fatal error", "Communication with NFC module failed.", 5, "ERROR");
+        success = RequestSender::sendLog(LOG_ENDPOINT, token, logData);
+        delete[] logData;
+        
+        ESP.restart();
+    }
+    else {
+        if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
+        
+        char* logData = DataFormatter::getLogData(IP_ADDRESS, "Successful setup", "The board has set up successfully, no errors have occured during startup.", 1, "INFO");
+        success = RequestSender::sendLog(LOG_ENDPOINT, token, logData);
+        delete[] logData;
+    }
 }
 
 
 void loop(void) {
     bool success;
     uint64_t card;
-
-    if ((millis() - lastTokenTime) > TOKEN_TIMEOUT) {
-        checkWiFiConnected();
-        delete[] token;
-        
-        success = RequestSender::requestToken(TOKEN_ENDPOINT, TOKEN_REQUEST_DATA, &token);
-        if (success) lastTokenTime = millis();
-        else Serial.print("Failed to acquire token");
-    }
-
-    if ((millis() - lastTestLogTime) > TEST_LOG_TIMEOUT) {
-        checkWiFiConnected();
-
-        char* logData = DataFormatter::getLogData("0.0.0.1", "Test message", "Test message data", 1, "INFO");
-        success = RequestSender::sendLog(LOG_ENDPOINT, token, logData);
-        delete[] logData;
-        if (success) lastTestLogTime = millis();
-        else { Serial.println("Failed to acquire token");  token = ""; }
-    }
-
+    char* buffer;
+    
+    if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
     
     success = cardReader.readCard(&card);
     if (success) {
-        checkWiFiConnected();
-
+        
+        if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
+        
+        buffer = DataFormatter::getAccessEndpoint(ACCESS_ENDPOINT_BASE, card, DEVICE_ID);
         bool allowed;
-        char* accessEndpoint = DataFormatter::getAccessEndpoint(ACCESS_ENDPOINT_BASE, card, 1);
-        success = RequestSender::requestAccess(accessEndpoint, token, &allowed);
-        delete[] accessEndpoint;
+        success = RequestSender::requestAccess(buffer, token, &allowed);
+        delete[] buffer;
+        
         if (success) {
-            if (allowed) Serial.println("Access allowed");
-            else Serial.println("Access denied");
+            if (allowed) {
+                Serial.println("Access granted.\n");
+                
+                if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
+                
+                buffer = DataFormatter::getLogData(IP_ADDRESS, "Access granted", "Access was granted to user with card " + card, 1, "INFO");
+                success = RequestSender::sendLog(LOG_ENDPOINT, token, buffer);
+                delete[] buffer;
+            }
+            else {
+                Serial.println("Access denied.\n");
+
+                if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
+                
+                buffer = DataFormatter::getLogData(IP_ADDRESS, "Access denied", "Access was denied for user with card " + card, 1, "INFO");
+                success = RequestSender::sendLog(LOG_ENDPOINT, token, buffer);
+                delete[] buffer;
+            }
         }
-        else Serial.println("Failed to request access");
+        else {
+            if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
+            
+            buffer = DataFormatter::getLogData(IP_ADDRESS, "Access request failed", "The board failed to send an access request.", 5, "ERROR");
+            success = RequestSender::sendLog(LOG_ENDPOINT, token, buffer);
+            delete[] buffer;
+        }
     }
-    
     
     delay(MAIN_LOOP_DELAY);
 }

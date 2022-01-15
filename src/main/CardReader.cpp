@@ -30,17 +30,15 @@ bool CardReader::begin() {
     
     uint32_t versiondata = nfc->getFirmwareVersion();
     if (!versiondata) {
-        Serial.println("Didn't find PN53x board");
+        Serial.println("Didn't find PN53x board.\n");
         return false;
     }
     
     Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
-    Serial.print("Firmware version "); Serial.print((versiondata>>16) & 0xFF, DEC); Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+    Serial.print("Firmware version: "); Serial.print((versiondata>>16) & 0xFF, DEC); Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+    Serial.println("Waiting for an ISO14443A Card...\n");
         
     nfc->SAMConfig();
-    Serial.println("Waiting for an ISO14443A Card...");
-    Serial.println("");
-    
     return true;
 }
 
@@ -49,18 +47,16 @@ bool CardReader::readCard(uint64_t* card) {
     uint8_t success;
     uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };
     uint8_t uidLength;
-    
-    success = nfc->readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, timeout);
-    if (success) {
-        Serial.println("Found an ISO14443A card");
-        Serial.print("  UID Length: "); Serial.print(uidLength, DEC); Serial.println(" bytes");
-        Serial.print("  UID Value: "); nfc->PrintHex(uid, uidLength);
-        Serial.print("  Decimal: "); Serial.println(*card);
-        Serial.println();
 
+    success = nfc->readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, timeout);
+    
+    if (success) {
         *card = convertToDecimal(uid, uidLength);
+        
+        Serial.print("Found an ISO14443A card with UID value: "); Serial.println(*card);
         return true;
     }
 
+    Serial.println("Waiting for an ISO14443A Card...\n");
     return false;
 }

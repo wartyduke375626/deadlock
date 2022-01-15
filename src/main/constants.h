@@ -17,3 +17,4 @@
 #define TEST_LOG_TIMEOUT 20000
 
 #define ACCESS_ENDPOINT_BASE "https://web-app2.uniba.sk/students-backend/entry/eval/"
+#define DEVICE_ID 1
