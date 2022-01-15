@@ -2,8 +2,6 @@
 
 This project uses an ESP8266 NodeMCU board and a PN532 NFC module. The board reads an ISO14443A cards and communicates with a backend server, which authorizes or denies access according to the UID value contained on the card chip.
 
-**The communication with the server is incomplete and TBA.**
-
 ## Required hardware:
 - ESP8266 NodeMCU WiFi Development Board
    - user manual: https://handsontec.com/dataspecs/module/esp8266-V13.pdf

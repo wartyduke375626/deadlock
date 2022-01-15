@@ -60,6 +60,16 @@ void resetToken(bool deleteOld) {
 }
 
 
+void sendLog(const IPAddress &ip, const char* msg, const char* data, unsigned int levelNo, const char* level) {
+    if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
+
+    char* logData = DataFormatter::getLogData(ip, msg, data, levelNo, level);
+    bool success = RequestSender::sendLog(LOG_ENDPOINT, token, logData);
+    delete[] logData;
+    //TODO: What if RequestSender::sendLog fails?
+}
+
+
 
 void setup(void) {
     Serial.begin(115200);
@@ -74,69 +84,45 @@ void setup(void) {
     resetToken(false);
 
     bool success = cardReader.begin();
+    
     if (!success) {
-        if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
-        
-        char* logData = DataFormatter::getLogData(IP_ADDRESS, "NFC module fatal error", "Communication with NFC module failed.", 5, "ERROR");
-        success = RequestSender::sendLog(LOG_ENDPOINT, token, logData);
-        delete[] logData;
-        
+        sendLog(IP_ADDRESS, "NFC module fatal error", "Communication with NFC module failed.", 5, "ERROR");
         ESP.restart();
     }
-    else {
-        if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
-        
-        char* logData = DataFormatter::getLogData(IP_ADDRESS, "Successful setup", "The board has set up successfully, no errors have occured during startup.", 1, "INFO");
-        success = RequestSender::sendLog(LOG_ENDPOINT, token, logData);
-        delete[] logData;
-    }
+    else sendLog(IP_ADDRESS, "Successful setup", "The board has set up successfully, no errors have occured during startup.", 1, "INFO");
 }
 
 
 void loop(void) {
     bool success;
     uint64_t card;
-    char* buffer;
-    
-    if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
+
+    // This also regularly checks if TOKEN_TIMOUT has expired and resets the token if so.
+    sendLog(IP_ADDRESS, "Board is active", "The board is active and waiting for cards. No errors have occured.", 1, "INFO");
     
     success = cardReader.readCard(&card);
     if (success) {
         
         if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
         
-        buffer = DataFormatter::getAccessEndpoint(ACCESS_ENDPOINT_BASE, card, DEVICE_ID);
-        bool allowed;
-        success = RequestSender::requestAccess(buffer, token, &allowed);
-        delete[] buffer;
+        char* accessEndpoint = DataFormatter::getAccessEndpoint(ACCESS_ENDPOINT_BASE, card, DEVICE_ID);
+        bool access;
+        success = RequestSender::requestAccess(accessEndpoint, token, &access);
+        delete[] accessEndpoint;
         
         if (success) {
-            if (allowed) {
+            
+            if (access) {
                 Serial.println("Access granted.\n");
-                
-                if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
-                
-                buffer = DataFormatter::getLogData(IP_ADDRESS, "Access granted", "Access was granted to user with card " + card, 1, "INFO");
-                success = RequestSender::sendLog(LOG_ENDPOINT, token, buffer);
-                delete[] buffer;
+                sendLog(IP_ADDRESS, "Access granted", "Access was granted to user with card " + card, 1, "INFO");
             }
             else {
                 Serial.println("Access denied.\n");
-
-                if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
-                
-                buffer = DataFormatter::getLogData(IP_ADDRESS, "Access denied", "Access was denied for user with card " + card, 1, "INFO");
-                success = RequestSender::sendLog(LOG_ENDPOINT, token, buffer);
-                delete[] buffer;
+                sendLog(IP_ADDRESS, "Access denied", "Access was denied for user with card " + card, 1, "INFO");
             }
         }
-        else {
-            if (checkWiFiConnectedAndTokenExpired()) resetToken(true);
-            
-            buffer = DataFormatter::getLogData(IP_ADDRESS, "Access request failed", "The board failed to send an access request.", 5, "ERROR");
-            success = RequestSender::sendLog(LOG_ENDPOINT, token, buffer);
-            delete[] buffer;
-        }
+        
+        else sendLog(IP_ADDRESS, "Access request failed", "The board failed to send an access request.", 5, "ERROR");
     }
     
     delay(MAIN_LOOP_DELAY);
